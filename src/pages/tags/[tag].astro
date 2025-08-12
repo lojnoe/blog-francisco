@@ -1,0 +1,102 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../../consts';
+import { getCollection } from 'astro:content';
+import { toTagSlug, prettyTag } from '../../lib/tags';
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  const slugs = new Set<string>();
+  posts.forEach(p => (p.data.tags ?? []).forEach(t => slugs.add(toTagSlug(t))));
+  return Array.from(slugs).map((slug) => ({ params: { tag: slug } }));
+}
+
+const { tag } = Astro.params; // slug en la URL
+let posts = await getCollection("blog", ({ data }) =>
+  (data.tags ?? []).some((t) => toTagSlug(t) === tag) &&
+  (import.meta.env.PROD ? !data.draft : true)
+);
+posts = posts.sort((a,b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// Busca un label “bonito” para el H1
+const firstMatchLabel =
+  posts.flatMap(p => p.data.tags ?? []).find(t => toTagSlug(t) === tag) ?? tag;
+const displayLabel = prettyTag(firstMatchLabel);
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <BaseHead
+      title={`#${tag} — ${SITE_TITLE}`}
+      description={`Artículos etiquetados con ${tag}. ${SITE_DESCRIPTION}`}
+    />
+    <style>
+      main { width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+      ul {
+        display: flex; flex-wrap: wrap; gap: 2rem;
+        list-style: none; margin: 0; padding: 0;
+      }
+      ul li { width: calc(50% - 1rem); }
+      ul li:first-child { width: 100%; margin-bottom: 1rem; text-align: center; }
+      ul li:first-child img { width: 100%; }
+      ul li img { margin-bottom: .5rem; border-radius: 12px; }
+      a { display: block; text-decoration: none; color: inherit; transition: .2s ease; }
+      .title { margin: 0; color: rgb(var(--black)); line-height: 1; }
+      .date { margin: 0; color: rgb(var(--gray)); }
+      a:hover .title, a:hover .date { color: rgb(var(--accent)); }
+      a:hover img { box-shadow: var(--box-shadow); }
+      .tags { margin:.25rem 0 0; display:flex; gap:.5rem; flex-wrap:wrap; }
+      .badge {
+        font-size:.85rem; padding:.2rem .5rem; border:1px solid #ddd; border-radius:999px;
+      }
+      .header {
+        display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;
+      }
+      @media (max-width: 720px) {
+        ul { gap: .5em; }
+        ul li { width: 100%; text-align: center; }
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div class="header">
+        <h1>#{tag}</h1>
+        <a href="/tags" class="badge">← Todas las etiquetas</a>
+      </div>
+
+      {posts.length === 0 ? (
+        <p>No hay artículos con esta etiqueta.</p>
+      ) : (
+        <ul>
+          {posts.map((post) => (
+            <li>
+              <a href={`/blog/${post.id}/`}>
+                {post.data.heroImage && (
+                  <img src={post.data.heroImage} alt="" width="720" height="360" />
+                )}
+                <h4 class="title">{post.data.title}</h4>
+
+                {post.data.tags?.length > 0 && (
+                  <p class="tags">
+                    {post.data.tags.map((t) => (
+                      <a href={`/tags/${encodeURIComponent(t)}/`} class="badge">#{t}</a>
+                    ))}
+                  </p>
+                )}
+
+                <p class="date"><FormattedDate date={post.data.pubDate} /></p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+    <Footer />
+  </body>
+</html>

@@ -1,0 +1,69 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { SITE_TITLE } from '../../consts';
+import { getCollection } from 'astro:content';
+import { toTagSlug, prettyTag } from '../../lib/tags';
+
+const posts = await getCollection("blog", ({ data }) => import.meta.env.PROD ? !data.draft : true);
+
+const map = new Map<string, { label: string, count: number }>();
+for (const p of posts) {
+  for (const raw of (p.data.tags ?? [])) {
+    const slug = toTagSlug(raw);
+    const label = prettyTag(raw);
+    const prev = map.get(slug);
+    map.set(slug, { label: prev?.label ?? label, count: (prev?.count ?? 0) + 1 });
+  }
+}
+const tags = Array.from(map.entries())
+  .sort((a,b) => b[1].count - a[1].count || a[1].label.localeCompare(b[1].label));
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <BaseHead title={`Etiquetas — ${SITE_TITLE}`} description="Explora las etiquetas del blog" />
+    <style>
+      main { width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+      h1 { margin-bottom: 1rem; }
+      .grid {
+        display: grid; gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        list-style: none; padding: 0; margin: 0;
+      }
+      .tag {
+        display: flex; align-items: center; justify-content: space-between;
+        border: 1px solid #eee; border-radius: 12px; padding: .75rem 1rem;
+        background: #fff;
+      }
+      .badge {
+        text-decoration: none;
+        border: 1px solid #ddd; border-radius: 999px;
+        padding: .25rem .6rem; font-size: .95rem; color: inherit;
+        transition: .2s ease;
+      }
+      .tag:hover .badge { color: rgb(var(--accent)); border-color: rgb(var(--accent)); }
+      .count {
+        font-variant-numeric: tabular-nums;
+        color: rgb(var(--gray));
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <h1>Etiquetas</h1>
+      <ul class="grid">
+  {tags.map(([slug, { label, count }]) => (
+    <li class="tag">
+      <a class="badge" href={`/tags/${slug}/`}>#{label}</a>
+      <span class="count">{count}</span>
+    </li>
+  ))}
+</ul>
+    </main>
+    <Footer />
+  </body>
+</html>

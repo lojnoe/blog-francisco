@@ -1,0 +1,28 @@
+---
+import { TinaCMSProvider } from "tinacms";
+
+const { cms, children } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog con TinaCMS</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <TinaCMSProvider cms={cms}>
+    <slot />
+  </TinaCMSProvider>
+  
+  <!-- Script para modo visual -->
+  {import.meta.env.DEV && (
+    <script type="module">
+      import { initTina } from "https://unpkg.com/@tinacms/scripts@0.1.0/dist/browser.js";
+      initTina();
+    </script>
+  )}
+</body>
+</html>
